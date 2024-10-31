@@ -330,3 +330,64 @@ if level_wilayah != 'Kel':
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+    # ... existing code ...
+
+    # Add new section for sub-levels visualization
+    st.markdown("## Distribusi Total Perizinan di Sub-wilayah")
+    
+    if level_wilayah == 'Dinas':
+        # For Dinas level, show aggregated Kecamatan data
+        dinas = selected_row['dinas']
+        sub_data = wdf[wdf['dinas'] == dinas].copy()
+        group_col = 'kecamatan'
+        title_text = f'Distribusi Total Perizinan per Kecamatan untuk Dinas {dinas}'
+        
+    elif level_wilayah == 'Kota':
+        # For Kota level, show Kelurahan data
+        kecamatan = wdf[wdf['kota'] == selected_row['kota']]['kecamatan'].unique()
+        sub_data = wdf[wdf['kecamatan'].isin(kecamatan)].copy()
+        group_col = 'kelurahan'
+        title_text = f'Distribusi Total Perizinan per Kelurahan di {selected_row["kota"]}'
+    else:
+        # Skip for other levels
+        sub_data = None
+        
+    if sub_data is not None:
+        # Calculate total for all bidang_cols
+        sub_data['total_izin'] = sub_data[bidang_cols].sum(axis=1)
+        
+        # Aggregate data by sub-region
+        agg_sub_data = sub_data.groupby(group_col)['total_izin'].sum().reset_index()
+        
+        # Sort by total
+        agg_sub_data = agg_sub_data.sort_values('total_izin', ascending=True)
+        
+        # Create sub-level chart
+        sub_fig = go.Figure()
+        
+        sub_fig.add_trace(go.Bar(
+            y=agg_sub_data[group_col],
+            x=agg_sub_data['total_izin'],
+            orientation='h',
+            text=[f'{int(x):,}' for x in agg_sub_data['total_izin']],
+            textposition='auto',
+            marker_color='#1f77b4',
+            name='Total Perizinan'
+        ))
+        
+        # Update layout
+        sub_fig.update_layout(
+            title=title_text,
+            xaxis_title='Jumlah Total Perizinan',
+            height=max(400, len(agg_sub_data) * 25),  # Dynamic height based on data
+            margin=dict(l=20, r=20, t=40, b=20),
+            showlegend=False,
+            uniformtext=dict(mode='hide', minsize=8)
+        )
+        
+        # Display chart with a unique key
+        st.plotly_chart(sub_fig, use_container_width=True, key="sub_level_chart")
+
+# ... rest of the code ...
